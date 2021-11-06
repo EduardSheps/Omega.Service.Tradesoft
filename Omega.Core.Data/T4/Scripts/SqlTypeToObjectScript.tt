@@ -1,0 +1,17 @@
+﻿<#@ template language="C#" hostspecific="True" debug="True" #>
+<#@ output extension="cs" #>
+<#@ include file="T4Toolbox.tt" #>
+<#@ include file="Settings.tt" #>
+<#@ include file="Common.tt" #>
+<#@ include file="..\Generators\SqlTypeToObjectGenerator.tt" #>
+<#
+    SqlTypeToObjectGenerator generator = new SqlTypeToObjectGenerator 
+    { 
+        ConnectionString = ConnectionString,
+        OutputDirectory = SqlTypeObjectsOutputDirectory,
+        ProjectNamespace = ProjectNamespace,
+        // SQL-тип (тот, что создан с помощью CREATE TYPE)
+        SqlType = "GOODS_MULTIPLICITY_DATA_TABLE"
+    };
+    generator.Run();
+#>

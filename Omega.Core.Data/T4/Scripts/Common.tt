@@ -1,0 +1,11 @@
+﻿<#+
+
+public const string ConnectionString = @"Data Source=m-dts01;Initial Catalog=ADTS_TEST2;Integrated Security=True";
+public const string CrossesOutputDirectory = "..\\..\\DAL\\Crosses\\Generated\\";
+public const string EntititesOutputDirectory = "..\\..\\DAL\\Entities\\Generated\\";
+public const string HelpersOutputDirectory = "..\\..\\DAL\\Helpers\\Generated\\";
+public const string SqlSourceObjectsOutputDirectory = "..\\..\\DAL\\SqlSourceObjects\\Generated\\";
+public const string SqlTypeObjectsOutputDirectory = "..\\..\\DAL\\SqlTypeObjects\\Generated\\";
+public const string ProjectNamespace = "Omega.Core.Data";
+
+#>

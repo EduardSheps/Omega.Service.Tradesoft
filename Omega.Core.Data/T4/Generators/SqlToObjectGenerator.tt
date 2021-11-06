@@ -1,0 +1,214 @@
+﻿<#@ assembly name="System.Data.dll" #>
+<#@ assembly name="System.Xml.dll" #>
+<#@ import namespace="System.Collections.ObjectModel" #>
+<#@ import namespace="System.Data" #>
+<#@ import namespace="System.Data.SqlClient" #>
+<#@ import namespace="System.Text" #>
+<#@ include file="..\Templates\SqlToObjectTemplate.tt" #>
+<#+
+public class SqlToObjectGenerator : Generator
+{
+	public string ConnectionString { get; set; }
+	public string OutputDirectory { get; set; }
+	public string ProjectNamespace { get; set; }
+	public string ClassName { get; set; }
+	public string SqlSource { get; set; }
+
+	private SqlConnection _con;
+	
+	
+	protected override void RunCore()
+	{
+		if (string.IsNullOrWhiteSpace(ConnectionString))
+			throw new InvalidOperationException("Не задано свойство ConnectionString");
+		
+		if (string.IsNullOrWhiteSpace(ClassName))
+			throw new InvalidOperationException("Не задано свойство ClassName");
+		
+		if (string.IsNullOrWhiteSpace(SqlSource))
+			throw new InvalidOperationException("Не задано свойство SqlSource");		
+				
+		using (_con = new SqlConnection(ConnectionString))
+		{
+			_con.Open();
+
+			try
+			{
+				string sqlSourceType;
+				IList<SqlFieldInfo> sqlFieldsIn;
+				SqlCommand cmd = CreateSqlCommand(out sqlSourceType, out sqlFieldsIn);
+				
+				using (var sqlReader = cmd.ExecuteReader(CommandBehavior.SchemaOnly))
+				{
+					Collection<SqlFieldInfo> sqlFieldsOut = new Collection<SqlFieldInfo>();
+					
+				    DataTable schemaTable = sqlReader.GetSchemaTable();
+					foreach (DataRow sqlFieldRow in schemaTable.Rows)
+					{
+						sqlFieldsOut.Add(new SqlFieldInfo()
+							{  
+								Name = (string)sqlFieldRow["ColumnName"],
+								Size = (int)sqlFieldRow["ColumnSize"],
+								AllowDBNull = (bool)sqlFieldRow["AllowDBNull"],
+								SqlDataType = (string)sqlFieldRow["DataTypeName"]
+							});
+					}
+
+					SqlToObjectTemplate template = new SqlToObjectTemplate(ProjectNamespace, ClassName, SqlSource, sqlSourceType, sqlFieldsIn, sqlFieldsOut);
+					string fileName = string.Format("{0}.Generated.cs", ClassName);
+					fileName = Path.Combine(OutputDirectory ?? string.Empty, fileName);
+					template.RenderToFile(fileName);
+				}
+			}
+			finally
+			{
+				_con.Close();
+			}
+		}
+	}
+	
+	private SqlCommand CreateSqlCommand(out string sqlSourceType, out IList<SqlFieldInfo> sqlFieldsIn)
+	{
+		sqlFieldsIn = new Collection<SqlFieldInfo>();
+		
+		SqlCommand sqlResult = new SqlCommand();
+		sqlResult.Connection = _con;
+
+		sqlSourceType = GetSqlSourceType();
+		if (sqlSourceType == "P") // ХП
+		{
+			sqlResult.CommandText = SqlSource;
+			sqlResult.CommandType = CommandType.StoredProcedure;
+			
+			List<SqlParameter> sqlParams = GetSqlParams();
+			foreach (var sqlParam in sqlParams)
+			{
+				var sqlField = new SqlFieldInfo 
+					{ 
+						Name = sqlParam.ParameterName.Substring(1), 
+						Size = sqlParam.Size,
+						AllowDBNull = sqlParam.IsNullable,
+						TypeName = sqlParam.TypeName,
+						SqlDbType = sqlParam.SqlDbType
+					};
+
+				sqlFieldsIn.Add(sqlField);
+				sqlResult.Parameters.Add(sqlParam);
+				
+				if (sqlField.IsTableType)
+				{
+					var dt = new DataTable();
+					string sql = string.Format("DECLARE @type {0} SELECT * FROM @type", sqlParam.TypeName);
+					using (SqlDataAdapter da = new SqlDataAdapter(sql, _con))
+					{
+            			da.SelectCommand.CommandType = CommandType.Text;
+						da.Fill(dt);
+					}
+					sqlParam.Value = dt;
+				}
+			}
+		}
+		else if (sqlSourceType == "TF" || sqlSourceType == "IF") // Табличные функции
+		{
+			sqlResult.CommandType = CommandType.Text;
+			List<SqlParameter> sqlParams = GetSqlParams();
+			StringBuilder sqlParamsBuilder = new StringBuilder();
+			StringBuilder sqlBuilder = new StringBuilder();
+			
+			foreach (var sqlParam in sqlParams)
+			{
+				var sqlField = new SqlFieldInfo()
+					{ 
+						Name = sqlParam.ParameterName.Substring(1), 
+						Size = sqlParam.Size,
+						AllowDBNull = sqlParam.IsNullable,
+						TypeName = sqlParam.TypeName,						
+						SqlDbType = sqlParam.SqlDbType
+					};
+
+				sqlFieldsIn.Add(sqlField);
+					
+				if (sqlField.IsTableType)
+				{
+					sqlBuilder.AppendFormat("\nDECLARE @{0} {1}", sqlField.Name, sqlField.TypeName);
+					sqlParamsBuilder.AppendFormat("@{0},", sqlField.Name);
+				}
+				else
+				{
+					sqlParamsBuilder.AppendFormat("NULL,");
+				}
+			}
+			if (sqlParamsBuilder.Length > 0)
+				sqlParamsBuilder.Remove(sqlParamsBuilder.Length - 1, 1);
+			
+			sqlBuilder.AppendFormat("\nSELECT * FROM dbo.{0}({1})", SqlSource, sqlParamsBuilder);
+			sqlResult.CommandText = sqlBuilder.ToString();	
+		}
+		else
+		{
+			if (sqlSourceType == null)
+				throw new InvalidOperationException(string.Format("В БД не неайден SQL-источник с именем \"{0}\"", SqlSource));
+			else
+				throw new NotSupportedException(string.Format("Неподдерживаемый тип SQL-источника. [SqlSource: {0}, Type: {1}]", SqlSource, sqlSourceType));
+		}
+		
+		return sqlResult;
+	}
+	
+	private string GetSqlSourceType()
+	{
+		string sql = string.Format("SELECT type FROM sys.objects WHERE name = '{0}'", SqlSource);
+		SqlCommand sqlCmd = new SqlCommand(sql, _con);
+		object oType = sqlCmd.ExecuteScalar();
+		if (oType == null || oType == DBNull.Value)
+			return null;
+		
+		return ((string)oType).Trim();
+	}
+	
+	private List<SqlParameter> GetSqlParams()
+	{
+		string sql = string.Format(@"
+SELECT 
+  ParamName   = cols.name, 
+  DataType    = tps.name, 
+  -- HACK: для nvarchar необходимо делить на 2, т.к max_length из sys.parameters возвращает размер именно в байтах
+  -- (пока зашиваем так грубо, т.к самого делителя в сист. представлениях не нашел)
+  Length      = CASE WHEN tps.name = 'nvarchar' AND cols.max_length <> -1 THEN cols.max_length / 2 ELSE cols.max_length END, 
+  IsOutParam  = cols.is_output,
+  AllowDBNull = tps.is_nullable,
+  IsTableType = tps.is_table_type
+FROM sys.objects src
+  INNER JOIN sys.parameters cols ON cols.object_id = src.object_id
+  INNER JOIN sys.types tps ON tps.system_type_id = cols.system_type_id AND tps.user_type_id = cols.user_type_id
+WHERE src.[name] = '{0}'
+ORDER BY cols.parameter_id", SqlSource);
+		
+		List<SqlParameter> sqlParams = new List<SqlParameter>();
+		SqlCommand sqlCmd = new SqlCommand(sql, _con);
+		using (SqlDataReader reader = sqlCmd.ExecuteReader())
+		{
+			while (reader.Read())
+        	{
+				string dataType = (string)reader["DataType"];
+				bool isTableType = (bool)reader["IsTableType"];
+				SqlDbType sqlDbType = EntityTemplateHelper.GetSqlDbType(dataType, isTableType);
+				SqlParameter sqlParam = new SqlParameter((string)reader["ParamName"], sqlDbType, Convert.ToInt32(reader["Length"]));
+				sqlParam.IsNullable = Convert.ToBoolean(reader["AllowDBNull"]);
+				
+				if (isTableType)
+					sqlParam.TypeName = dataType;
+				
+				if (Convert.ToBoolean(reader["IsOutParam"]))
+					sqlParam.Direction = ParameterDirection.Output;
+				else
+					sqlParam.Value = DBNull.Value;
+				
+				sqlParams.Add(sqlParam);
+        	}
+		}
+		
+		return sqlParams;
+	}
+}
+#>

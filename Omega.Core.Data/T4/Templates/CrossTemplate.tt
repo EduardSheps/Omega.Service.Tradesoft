@@ -1,0 +1,265 @@
+﻿<#+
+public class CrossTemplate : Template
+{
+    private CrossType _crossType;
+    
+        
+    public CrossTemplate(CrossType crossType)
+    {
+        _crossType = crossType;
+    }
+    
+    public override string TransformText()
+    {
+        string crossTypeCSharpName = EntityTemplateHelper.GetCSharpName(_crossType.SystemName);
+        string className = string.Concat(crossTypeCSharpName, "Cross");
+#>
+using System.Collections.Generic;
+using System.Data;
+
+using TruckService.ADTS.Core.DAL.Entities;
+using TruckService.ADTS.Core.MetaData;
+using TruckService.ADTS.Core.Utility;
+
+namespace TruckService.ADTS.Core.DAL.Crosses
+{
+    /// <summary>
+    /// <#= _crossType.Name #>.
+    /// </summary>
+    /// <remarks>
+    /// ВНИМАНИЕ!!! Данный класс был сгенерирован автоматически, поэтому все изменения, внесенные Вами в этот класс,
+    /// могут быть утеряны при последующих генерациях.
+    /// </remarks>
+    public partial class <#= className #> : BaseCross
+    {
+        #region Columns class
+
+        public class Columns : BaseCross.BaseColumns
+        {
+<#+ PushIndent(DefaultIndent); #><#+ PushIndent(DefaultIndent); #><#+ PushIndent(DefaultIndent); #>
+/// <summary>
+/// ИД сущности "<#= _crossType.FirstEntityName #>".
+/// </summary>
+public const string <#= EntityTemplateHelper.GetCSharpName(_crossType.FirstEntitySysName) #>Id = "id_<#= _crossType.FirstEntitySysName.ToLower() #>";
+/// <summary>
+/// ИД сущности "<#= _crossType.SecondEntityName #>".
+/// </summary>
+public const string <#= EntityTemplateHelper.GetCSharpName(_crossType.SecondEntitySysName) #>Id = "id_<#= _crossType.SecondEntitySysName.ToLower() #>";
+<#+ PopIndent(); #><#+ PopIndent(); #><#+ PopIndent(); #>
+        }
+
+        #endregion
+
+
+        #region Properties
+
+        /// <summary>
+        /// ИД сущности "<#= _crossType.FirstEntityName #>".
+        /// </summary>
+        public int? <#= EntityTemplateHelper.GetCSharpName(_crossType.FirstEntitySysName) #>Id
+        {
+            get { return (int?)CurrentAttributesValues[Columns.<#= EntityTemplateHelper.GetCSharpName(_crossType.FirstEntitySysName) #>Id]; }
+            set { CurrentAttributesValues[Columns.<#= EntityTemplateHelper.GetCSharpName(_crossType.FirstEntitySysName) #>Id] = value; }
+        }
+
+        /// <summary>
+        /// ИД сущности "<#= _crossType.SecondEntityName #>".
+        /// </summary>
+        public int? <#= EntityTemplateHelper.GetCSharpName(_crossType.SecondEntitySysName) #>Id
+        {
+            get { return (int?)CurrentAttributesValues[Columns.<#= EntityTemplateHelper.GetCSharpName(_crossType.SecondEntitySysName) #>Id]; }
+            set { CurrentAttributesValues[Columns.<#= EntityTemplateHelper.GetCSharpName(_crossType.SecondEntitySysName) #>Id] = value; }
+        }
+
+        #endregion
+
+
+        #region Constructors
+
+        /// <summary>
+        /// Конструктор по умолчанию.
+        /// </summary>
+        private <#= className #>()
+        {
+        }
+
+        #endregion
+
+
+        #region Base Classes Overrides
+
+        /// <summary>
+        /// Тип кросса.
+        /// </summary>
+        public override CrossType TypeOfCross
+        {
+            get { return CrossType.GetManyToManyCrossType(CrossType.Names.<#= crossTypeCSharpName #>); }
+        }
+
+        /// <summary>
+        /// Создает экземпляр класса.
+        /// </summary>
+        /// <returns>Новый экземпляр класса.</returns>
+        public override BaseCross CreateInstance()
+        {
+            return CreateNew();
+        }
+
+        /// <summary>
+        /// Создает экземпляр класса на основании данных объекта <see cref="DataRow"/>.
+        /// </summary>
+        /// <param name="entityRow">Объект <see cref="DataRow"/>, на основании которого создается текущий экземпляр класса.</param>
+        /// <returns>Новый экземпляр класса.</returns>
+        public override BaseCross CreateInstance(DataRow crossRow)
+        {
+            return CreateNew(crossRow);
+        }
+
+        protected override IDictionary<string, object> CreateDefaultAttributesValues()
+        {
+            var attribsValues = base.CreateDefaultAttributesValues();
+
+            attribsValues.Add(Columns.<#= EntityTemplateHelper.GetCSharpName(_crossType.FirstEntitySysName) #>Id, null);
+            attribsValues.Add(Columns.<#= EntityTemplateHelper.GetCSharpName(_crossType.SecondEntitySysName) #>Id, null);
+
+            return attribsValues;
+        }
+
+        protected override void InitNewInstanceFromRow(DataRow row)
+        {
+            base.InitNewInstanceFromRow(row);
+
+            if (row.RowState.In(DataRowState.Modified, DataRowState.Unchanged))
+            {
+                OriginalAttributesValues[Columns.<#= EntityTemplateHelper.GetCSharpName(_crossType.FirstEntitySysName) #>Id] = ConversionUtility.GetNullableInt(row, Columns.<#= EntityTemplateHelper.GetCSharpName(_crossType.FirstEntitySysName) #>Id, DataRowVersion.Original);
+                OriginalAttributesValues[Columns.<#= EntityTemplateHelper.GetCSharpName(_crossType.SecondEntitySysName) #>Id] = ConversionUtility.GetNullableInt(row, Columns.<#= EntityTemplateHelper.GetCSharpName(_crossType.SecondEntitySysName) #>Id, DataRowVersion.Original);
+            }
+
+            CurrentAttributesValues[Columns.<#= EntityTemplateHelper.GetCSharpName(_crossType.FirstEntitySysName) #>Id] = ConversionUtility.GetNullableInt(row, Columns.<#= EntityTemplateHelper.GetCSharpName(_crossType.FirstEntitySysName) #>Id);
+            CurrentAttributesValues[Columns.<#= EntityTemplateHelper.GetCSharpName(_crossType.SecondEntitySysName) #>Id] = ConversionUtility.GetNullableInt(row, Columns.<#= EntityTemplateHelper.GetCSharpName(_crossType.SecondEntitySysName) #>Id);
+        }
+        
+        #endregion Base Classes Overrides
+
+
+        /// <summary>
+        /// Инициализация объекта.
+        /// </summary>
+        /// <param name="row">Необязательный параметр.</param>
+        partial void InitNewInstance(DataRow crossRow);
+
+
+        #region Static methods
+
+        /// <summary>
+        /// Создает экземпляр класса.
+        /// </summary>
+        /// <returns>Новый экземпляр класса.</returns>
+        public static <#= className #> CreateNew()
+        {
+            var newInstance = new <#= className #>();
+            newInstance.InitNewInstance(null);
+            return newInstance;
+        }
+
+        /// <summary>
+        /// Создает экземпляр класса на основании данных объекта <see cref="DataRow"/>.
+        /// </summary>
+        /// <param name="crossRow">Объект <see cref="DataRow"/>, на основании которого создается текущий экземпляр класса.</param>
+        /// <returns>Новый экземпляр класса.</returns>
+        public static <#= className #> CreateNew(DataRow crossRow)
+        {
+            var newInstance = new <#= className #>();
+            newInstance.InitNewInstanceFromRow(crossRow);
+            newInstance.InitNewInstance(crossRow);
+            return newInstance;
+        }
+
+        /// <summary>
+        /// Создает экземпляр класса и проецирует его на объект <see cref="DataRow"/>.
+        /// </summary>
+        /// <param name="crossRow">Объект <see cref="DataRow"/>, на который проецируется текущий экземпляр класса.</param>
+        /// <returns>Новый экземпляр класса.</returns>
+        public static <#= className #> CreateNewMapped(DataRow crossRow)
+        {
+            var newInstance = CreateNew();
+            newInstance.MapToDataRow(crossRow);
+            return newInstance;
+        }
+        
+        /// <summary>
+        /// Извлекает из БД кросс "<#= _crossType.Name #>".
+        /// </summary>
+        /// <returns>Новый экземпляр класса.</returns>
+        public static <#= className #> Get(int id, DBContext db = null)
+        {
+            return MetaDataUtility.GetCross<<#= className #>>(id, db: db);
+        }
+
+        /// <summary>
+        /// Извлекает из БД кросс "<#= _crossType.Name #>".
+        /// </summary>
+        /// <returns>Новый экземпляр класса.</returns>
+        public static <#= className #> Get(IDictionary<string, object> whereConditions = null, DBContext db = null)
+        {
+            return MetaDataUtility.GetCross<<#= className #>>(whereConditions: whereConditions, db: db);
+        }
+
+        /// <summary>
+        /// Извлекает из БД кросс "<#= _crossType.Name #>" с учетом проектных записей.
+        /// </summary>
+        /// <returns>Новый экземпляр класса.</returns>
+        public static <#= className #> GetProject(int id, DBContext db = null)
+        {
+            return MetaDataUtility.GetCross<<#= className #>>(id, lookupProjectView: true, db: db);
+        }
+
+        /// <summary>
+        /// Извлекает из БД кросс "<#= _crossType.Name #>" с учетом проектных записей.
+        /// </summary>
+        /// <returns>Новый экземпляр класса.</returns>
+        public static <#= className #> GetProject(IDictionary<string, object> whereConditions = null, DBContext db = null)
+        {
+            return MetaDataUtility.GetCross<<#= className #>>(whereConditions: whereConditions, lookupProjectView: true, db: db);
+        }
+
+        /// <summary>
+        /// Возвращает последовательность элементов в виде коллекции <see cref="IList<>"/>.
+        /// </summary>
+        public static IList<<#= className #>> Select(IDictionary<string, object> whereConditions = null, DBContext db = null)
+        {
+            return MetaDataUtility.GetCrosses<<#= className #>>(whereConditions: whereConditions, db: db);
+        }
+
+        /// <summary>
+        /// Возвращает последовательность элементов с учетом проектных записей в виде коллекции <see cref="IList<>"/>.
+        /// </summary>
+        public static IList<<#= className #>> SelectProject(IDictionary<string, object> whereConditions = null, DBContext db = null)
+        {
+            return MetaDataUtility.GetCrosses<<#= className #>>(whereConditions: whereConditions, lookupProjectView: true, db: db);
+        }
+
+        /// <summary>
+        /// Возвращает последовательность элементов в виде объекта <see cref="DataTable"/>.
+        /// </summary>
+        public static DataTable SelectTable(IDictionary<string, object> whereConditions = null, DBContext db = null)
+        {
+            return MetaDataUtility.SelectCrossesTable<<#= className #>>(whereConditions: whereConditions, db: db);
+        }
+
+        /// <summary>
+        /// Возвращает последовательность элементов с учетом проектных записей в виде объекта <see cref="DataTable"/>.
+        /// </summary>
+        public static DataTable SelectProjectTable(IDictionary<string, object> whereConditions = null, DBContext db = null)
+        {
+            return MetaDataUtility.SelectCrossesTable<<#= className #>>(whereConditions: whereConditions, lookupProjectView: true, db: db);
+        }
+        
+        #endregion
+    }
+}
+<#+ 
+        return this.GenerationEnvironment.ToString();
+    }
+}
+#>

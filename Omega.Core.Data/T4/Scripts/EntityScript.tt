@@ -1,0 +1,20 @@
+﻿<#@ template language="C#" hostspecific="True" debug="True" #>
+<#@ output extension="txt" #>
+<#@ include file="T4Toolbox.tt" #>
+
+<#@ include file="Settings.tt" #>
+<#@ include file="Common.tt" #>
+<#@ include file="..\Generators\EntityGenerator.tt" #>
+
+<#
+
+EntityGenerator generator = new EntityGenerator 
+	{ 
+		ConnectionString = ConnectionString,
+		OutputDirectory = EntititesOutputDirectory,
+		PreserveExistingFile = false,
+		EntityName = "contractor_unactual_type"
+	};
+generator.Run();
+
+#>

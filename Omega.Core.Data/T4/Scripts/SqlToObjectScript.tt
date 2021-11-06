@@ -1,0 +1,18 @@
+﻿<#@ template language="C#" hostspecific="True" debug="True" #>
+<#@ output extension="cs" #>
+<#@ include file="T4Toolbox.tt" #>
+<#@ include file="Settings.tt" #>
+<#@ include file="Common.tt" #>
+<#@ include file="..\Generators\SqlToObjectGenerator.tt" #>
+<#
+	SqlToObjectGenerator generator = new SqlToObjectGenerator 
+	{ 
+		ConnectionString = ConnectionString,
+		OutputDirectory = SqlSourceObjectsOutputDirectory,
+		ProjectNamespace = ProjectNamespace,
+		ClassName = "DocSupplierBonusEntryDetail",
+		// ХП, функция
+		SqlSource = "csp_DE_Doc_Supplier_Bonus_Entry_Info_Get"
+	};
+	generator.Run();
+#>

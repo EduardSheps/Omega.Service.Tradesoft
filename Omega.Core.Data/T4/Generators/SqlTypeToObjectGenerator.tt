@@ -1,0 +1,75 @@
+﻿<#@ assembly name="System.Data.dll" #>
+<#@ assembly name="System.Xml.dll" #>
+<#@ import namespace="System.Collections.ObjectModel" #>
+<#@ import namespace="System.Data" #>
+<#@ import namespace="System.Data.SqlClient" #>
+<#@ include file="..\Templates\SqlTypeToObjectTemplate.tt" #>
+<#+
+public class SqlTypeToObjectGenerator : Generator
+{
+    public string ConnectionString { get; set; }
+    public string OutputDirectory { get; set; }
+    public string ProjectNamespace { get; set; }	
+    public string SqlType { get; set; }
+
+    private SqlConnection _con;
+    
+    
+    protected override void RunCore()
+    {
+        if (string.IsNullOrWhiteSpace(ConnectionString))
+            throw new InvalidOperationException("Не задано свойство ConnectionString");
+        
+        if (string.IsNullOrWhiteSpace(SqlType))
+            throw new InvalidOperationException("Не задано свойство SqlType");		
+                
+        using (_con = new SqlConnection(ConnectionString))
+        {
+            _con.Open();
+
+            try
+            {
+                SqlCommand cmd = CreateSqlCommand();
+                
+                using (var sqlReader = cmd.ExecuteReader(CommandBehavior.SchemaOnly))
+                {
+                    Collection<SqlFieldInfo> sqlFields = new Collection<SqlFieldInfo>();
+                    
+                    DataTable schemaTable = sqlReader.GetSchemaTable();
+                    foreach (DataRow sqlFieldRow in schemaTable.Rows)
+                    {
+                        sqlFields.Add(new SqlFieldInfo()
+                            {  
+                                Name = (string)sqlFieldRow["ColumnName"],
+                                Size = (int)sqlFieldRow["ColumnSize"],
+                                AllowDBNull = (bool)sqlFieldRow["AllowDBNull"],
+                                SqlDataType = (string)sqlFieldRow["DataTypeName"],
+                                IsBitNullAvailable = true
+                            });
+                    }
+
+                    string className = EntityTemplateHelper.GetCSharpName(SqlType, false);
+                    var template = new SqlTypeToObjectTemplate(ProjectNamespace, SqlType, className, sqlFields);
+                    string fileName = string.Format("{0}.Generated.cs", className);
+                    fileName = Path.Combine(OutputDirectory ?? string.Empty, fileName);
+                    template.RenderToFile(fileName);
+                }
+            }
+            finally
+            {
+                _con.Close();
+            }
+        }
+    }
+    
+    private SqlCommand CreateSqlCommand()
+    {
+        string cmd = string.Format("DECLARE @type {0} SELECT * FROM @type", SqlType);
+        SqlCommand sqlResult = new SqlCommand(cmd);
+        sqlResult.Connection = _con;
+        sqlResult.CommandType = CommandType.Text;
+        
+        return sqlResult;
+    }
+}
+#>

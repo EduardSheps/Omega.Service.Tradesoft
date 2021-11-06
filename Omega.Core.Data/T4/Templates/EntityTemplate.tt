@@ -1,0 +1,451 @@
+﻿<#+
+public class EntityTemplate : Template
+{
+    private Entity _entity;
+    private List<Entity> _allEntities;
+    private List<CrossType> _allCrossTypes;
+
+    public EntityTemplate(Entity entity, List<Entity> allEntities, List<CrossType> allCrossTypes)
+    {
+        if (entity == null)
+            throw new ArgumentNullException("entity");
+
+        _entity = entity;
+        _allEntities = allEntities;
+        _allCrossTypes = allCrossTypes;
+    }
+
+    public override string TransformText()
+    {
+        string entTypeCSharpName = EntityTemplateHelper.GetCSharpName(_entity.SystemName);
+#>
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
+
+using TruckService.ADTS.Core.DAL;
+using TruckService.ADTS.Core.DAL.Entities;
+using TruckService.ADTS.Core.DAL.Interfaces;
+using TruckService.ADTS.Core.MetaData;
+using TruckService.ADTS.Core.Utility;
+
+namespace TruckService.ADTS.Core.DAL.Entities
+{
+    /// <summary>
+    /// <#= _entity.Name #>.
+    /// </summary>
+    /// <remarks>
+    /// ВНИМАНИЕ!!! Данный класс был сгенерирован автоматически, поэтому все изменения, внесенные Вами в этот класс,
+    /// могут быть утеряны при последующих генерациях.
+    /// </remarks>	
+    [DataMember]
+    [ProtoMember]
+    public partial class <#= entTypeCSharpName #> : BaseEntity
+    {<#+ if (_entity.SystemName == "entity" && _allEntities != null) { #>
+
+        #region Names
+
+        public static class Names
+        {
+<#+  _allEntities.ForEach(entity => { #>
+            /// <summary>
+            /// <#= entity.Name  #>.
+            /// </summary>
+            public const string <#= EntityTemplateHelper.GetCSharpName(entity.SystemName) #> = "<#= entity.SystemName.ToLower() #>";
+<#+ }); #>
+        }
+
+        #endregion Names
+
+
+<#+ } else if (_entity.SystemName == "cross_type" && _allCrossTypes != null) { #>
+
+        #region Names
+
+        public static class Names
+        {
+<#+  _allCrossTypes.ForEach(cross => { #>
+            /// <summary>
+            /// <#= cross.Name  #>.
+            /// </summary>
+            public const string <#= EntityTemplateHelper.GetCSharpName(cross.SystemName) #> = "<#= cross.SystemName.ToLower() #>";
+<#+ }); #>
+        }
+
+        #endregion Names
+
+
+<#+ } #>
+
+        #region Columns class
+
+        public class Columns : BaseEntity.BaseColumns
+        {<#+ PushIndent(DefaultIndent); #><#+ PushIndent(DefaultIndent); #><#+ PushIndent(DefaultIndent); #>
+<#+ _entity.Attributes.ForEach(attr => {#><#= Environment.NewLine #>/// <summary>
+/// <#= attr.Name #>.
+/// </summary>
+public const string <#= EntityTemplateHelper.GetCSharpName(attr.ColumnName, true) #> = "<#= attr.ColumnName #>";<#+ }); #>
+<#+ _entity.CrossTypes.ForEach(crs => { if (!crs.IsManyToMany) { #><#= Environment.NewLine #>/// <summary>
+/// <#= crs.Name #>.
+/// </summary>
+public const string <#= EntityTemplateHelper.ConvertDbCrossNameToCSharpName(crs.SystemName) #> = "<#= crs.SystemName #>";<#+ } }); #>
+<#+ PopIndent(); #><#+ PopIndent(); #><#+ PopIndent(); #>
+<#= Environment.NewLine #>        }
+
+        #endregion Columns class
+
+
+        #region Properties
+
+<#+ _entity.Attributes.ForEach(attr => {
+    string cSharpDataType = EntityTemplateHelper.GetCSharpAttribDataType(attr.DataType);
+    string cSharpColName = EntityTemplateHelper.GetCSharpName(attr.ColumnName, true);
+    if (cSharpDataType != "string" && cSharpDataType != "bool" && cSharpDataType != "byte[]")
+    cSharpDataType += "?";
+    #>
+        /// <summary>
+        /// <#= attr.Name #>.
+        /// </summary>
+        public <#= cSharpDataType #> <#= cSharpColName #>
+        {
+            get { return CurrentAttributesValues[Columns.<#= cSharpColName #>].GetAs<<#= cSharpDataType #>>(); }
+            set { CurrentAttributesValues[Columns.<#= cSharpColName #>] = value; }
+        }
+<#+ }); #>
+
+<#+ _entity.CrossTypes.ForEach(crs => {
+    if (!crs.IsManyToMany) {
+    string cSharpColName = EntityTemplateHelper.ConvertDbCrossNameToCSharpName(crs.SystemName);
+    #>
+        /// <summary>
+        /// <#= crs.Name #>.
+        /// </summary>
+        public int? <#= cSharpColName #>
+        {
+            get { return CurrentAttributesValues[Columns.<#= cSharpColName #>].GetAs<int?>(); }
+            set { CurrentAttributesValues[Columns.<#= cSharpColName #>] = value; }
+        }
+<#+ } }); #>
+
+        #endregion Properties
+
+
+        #region Constructors
+
+        /// <summary>
+        /// Конструктор по умолчанию.
+        /// </summary>
+        private <#= entTypeCSharpName #>(IDbAndMetadataContext metadata) : base(metadata)
+        {
+        }
+
+        #endregion
+
+
+        #region Base Classes Overrides
+
+        /// <summary>
+        /// Тип сущности.
+        /// </summary>
+        public override Entity TypeOfEntity
+        {
+            get { return _metadata.Entities.GetByName(Entity.Names.<#= entTypeCSharpName #>); }
+        }
+
+        /// <summary>
+        /// Создает экземпляр класса.
+        /// </summary>
+        /// <returns>Новый экземпляр класса.</returns>
+        public override BaseEntity CreateInstance()
+        {
+            return CreateNew(_metadata);
+        }
+
+        /// <summary>
+        /// Создает экземпляр класса на основании данных объекта <see cref="DataRow"/>.
+        /// </summary>
+        /// <param name="entityRow">Объект <see cref="DataRow"/>, на основании которого создается текущий экземпляр класса.</param>
+        /// <returns>Новый экземпляр класса.</returns>
+        public override BaseEntity CreateInstance(DataRow entityRow)
+        {
+            return CreateNew(_metadata, entityRow);
+        }
+
+        protected override IDictionary<string, object> CreateDefaultAttributesValues()
+        {
+            var attribsValues = base.CreateDefaultAttributesValues();
+
+<#+ _entity.Attributes.ForEach(attr => 
+        {
+            string cSharpDataType = EntityTemplateHelper.GetCSharpAttribDataType(attr.DataType);
+            #>
+            attribsValues.Add(Columns.<#= EntityTemplateHelper.GetCSharpName(attr.ColumnName, true) #>, <#= cSharpDataType == "bool" ? "false" : "null" #>);
+<#+ }); #>
+<#+ _entity.CrossTypes.ForEach(crs => 
+        { 
+            if (!crs.IsManyToMany) { 
+            #>
+            attribsValues.Add(Columns.<#= EntityTemplateHelper.ConvertDbCrossNameToCSharpName(crs.SystemName) #>, null);
+<#+ } }); #>
+
+            return attribsValues;
+        }
+
+        protected override void InitNewInstanceFromRow(DataRow row)
+        {
+            base.InitNewInstanceFromRow(row);
+            var version = DataRowVersion.Original;
+
+            if (row.RowState.In(DataRowState.Modified, DataRowState.Unchanged))
+            {
+<#+ _entity.Attributes.ForEach(attr => 
+        {
+            string cSharpDataType = EntityTemplateHelper.GetCSharpAttribDataType(attr.DataType);
+            string cSharpColName = EntityTemplateHelper.GetCSharpName(attr.ColumnName, true);
+
+            if (cSharpDataType == "byte[]")
+            {
+            #>
+                OriginalAttributesValues[Columns.<#= cSharpColName #>] = ConversionUtility.GetNullableTypeValue<byte[]>(row, Columns.<#= cSharpColName #>, version);
+<#+ } else if (cSharpDataType == "bool") { #>
+                OriginalAttributesValues[Columns.<#= cSharpColName #>] = ConversionUtility.GetBoolean(row, Columns.<#= cSharpColName #>, version);
+<#+ } else if (cSharpDataType == "DateTime") { #>
+                OriginalAttributesValues[Columns.<#= cSharpColName #>] = ConversionUtility.GetNullableDateTime(row, Columns.<#= cSharpColName #>, version);
+<#+ } else { #>
+                OriginalAttributesValues[Columns.<#= cSharpColName #>] = ConversionUtility.Get<#= string.Concat((cSharpDataType != "string" && cSharpDataType != "bool") ? "Nullable" : string.Empty, EntityTemplateHelper.GetCSharpName(cSharpDataType)) #>(row, Columns.<#= cSharpColName #>, version);
+<#+ } }); #>
+<#+ _entity.CrossTypes.ForEach(crs => 
+        { 
+            if (!crs.IsManyToMany) { 
+                string cSharpColName = EntityTemplateHelper.ConvertDbCrossNameToCSharpName(crs.SystemName);
+                #>
+                OriginalAttributesValues[Columns.<#= cSharpColName #>] = ConversionUtility.GetNullableInt(row, Columns.<#= cSharpColName #>, version);
+<#+ } }); #>
+            }
+
+            version = row.RowState == DataRowState.Detached ? DataRowVersion.Proposed : DataRowVersion.Current;
+
+<#+ _entity.Attributes.ForEach(attr => 
+        {
+            string cSharpDataType = EntityTemplateHelper.GetCSharpAttribDataType(attr.DataType);
+            string cSharpColName = EntityTemplateHelper.GetCSharpName(attr.ColumnName, true);
+            if (cSharpDataType == "byte[]")
+            {
+            #>
+            CurrentAttributesValues[Columns.<#= cSharpColName #>] = ConversionUtility.GetNullableTypeValue<byte[]>(row, Columns.<#= cSharpColName #>, version);
+<#+ } else if (cSharpDataType == "bool") { #>
+            CurrentAttributesValues[Columns.<#= cSharpColName #>] = ConversionUtility.GetBoolean(row, Columns.<#= cSharpColName #>, version);
+<#+ } else if (cSharpDataType == "DateTime") { #>
+            CurrentAttributesValues[Columns.<#= cSharpColName #>] = ConversionUtility.GetNullableDateTime(row, Columns.<#= cSharpColName #>, version);
+<#+ } else { #>
+            CurrentAttributesValues[Columns.<#= cSharpColName #>] = ConversionUtility.Get<#= string.Concat((cSharpDataType != "string" && cSharpDataType != "bool") ? "Nullable" : string.Empty, EntityTemplateHelper.GetCSharpName(cSharpDataType)) #>(row, Columns.<#= cSharpColName #>, version);
+<#+ } }); #>
+<#+ _entity.CrossTypes.ForEach(crs => 
+        { 
+            if (!crs.IsManyToMany) { 
+                string cSharpColName = EntityTemplateHelper.ConvertDbCrossNameToCSharpName(crs.SystemName);
+                #>
+            CurrentAttributesValues[Columns.<#= cSharpColName #>] = ConversionUtility.GetNullableInt(row, Columns.<#= cSharpColName #>, version);
+<#+ } }); #>
+        }
+
+        #endregion Base Classes Overrides
+
+        /// <summary>
+        /// Инициализация объекта.
+        /// </summary>
+        /// <param name="row">Необязательный параметр.</param>
+        partial void InitNewInstance(DataRow row);
+
+        #region Static methods
+
+        /// <summary>
+        /// Возвращает имена собственных атрибутов и кроссов сущности. Атрибуты и кроссы унаследованные от базовой сущности не включаются.
+        /// </summary>
+        public static string[] GetOwnColumns()
+        {
+            return new string[]
+            {
+<#+ _entity.Attributes.ForEach(attr => {#>
+                Columns.<#= EntityTemplateHelper.GetCSharpName(attr.ColumnName, true) #>,
+<#+ }); #>
+<#+ _entity.CrossTypes.ForEach(crs => { if (!crs.IsManyToMany) { #>
+                Columns.<#= EntityTemplateHelper.ConvertDbCrossNameToCSharpName(crs.SystemName) #>,
+<#+ } }); #>
+            };
+        }
+
+        /// <summary>
+        /// Создает экземпляр класса.
+        /// </summary>
+        /// <returns>Новый экземпляр класса.</returns>
+        public static <#= entTypeCSharpName #> CreateNew(IDbAndMetadataContext metadata)
+        {
+            var newInstance = new <#= entTypeCSharpName #>(metadata);
+            newInstance.InitNewInstance(null);
+            return newInstance;
+        }
+
+        /// <summary>
+        /// Создает экземпляр класса на основании данных объекта <see cref="DataRow"/>.
+        /// </summary>
+        /// <param name="entityRow">Объект <see cref="DataRow"/>, на основании которого создается текущий экземпляр класса.</param>
+        /// <returns>Новый экземпляр класса.</returns>
+        public static <#= entTypeCSharpName #> CreateNew(IDbAndMetadataContext metadata, DataRow entityRow)
+        {
+            var newInstance = new <#= entTypeCSharpName #>(metadata);
+            newInstance.InitNewInstanceFromRow(entityRow);
+            newInstance.InitNewInstance(entityRow);
+            return newInstance;
+        }
+
+        /// <summary>
+        /// Создает экземпляр класса и проецирует его на объект <see cref="DataRow"/>.
+        /// </summary>
+        /// <param name="entityRow">Объект <see cref="DataRow"/>, на который проецируется текущий экземпляр класса.</param>
+        /// <returns>Новый экземпляр класса.</returns>
+        public static <#= entTypeCSharpName #> CreateNewMapped(IDbAndMetadataContext metadata, DataRow entityRow)
+        {
+            var newInstance = CreateNew(metadata);
+            newInstance.MapToDataRow(entityRow);
+            return newInstance;
+        }
+
+        #endregion
+
+#if !CLR_PROJECT
+        #region Static methods
+
+        /// <summary>
+        /// Извлекает из БД сущность "<#= _entity.Name #>".
+        /// </summary>
+        /// <returns>Новый экземпляр класса.</returns>
+        public static <#= entTypeCSharpName #> Get(int id, DBContext db = null)
+        {
+            return MetaDataUtility.GetEntity<<#= entTypeCSharpName #>>(id, db: db);
+        }
+
+        /// <summary>
+        /// Извлекает из БД сущность "<#= _entity.Name #>".
+        /// </summary>
+        /// <returns>Новый экземпляр класса.</returns>
+        public static <#= entTypeCSharpName #> Get(IDictionary<string, object> whereConditions = null, DBContext db = null)
+        {
+            return MetaDataUtility.GetEntity<<#= entTypeCSharpName #>>(whereConditions: whereConditions, db: db);
+        }
+
+        /// <summary>
+        /// Извлекает из БД сущность "<#= _entity.Name #>" с учетом проектных записей.
+        /// </summary>
+        /// <returns>Новый экземпляр класса.</returns>
+        public static <#= entTypeCSharpName #> GetProject(int id, DBContext db = null)
+        {
+            return MetaDataUtility.GetEntity<<#= entTypeCSharpName #>>(id, lookupProjectView: true, db: db);
+        }
+
+        /// <summary>
+        /// Извлекает из БД сущность "<#= _entity.Name #>" с учетом проектных записей.
+        /// </summary>
+        /// <returns>Новый экземпляр класса.</returns>
+        public static <#= entTypeCSharpName #> GetProject(IDictionary<string, object> whereConditions = null, DBContext db = null)
+        {
+            return MetaDataUtility.GetEntity<<#= entTypeCSharpName #>>(whereConditions: whereConditions, lookupProjectView: true, db: db);
+        }
+
+        /// <summary>
+        /// Извлекает из БД сущность "<#= _entity.Name #>", представленной объектом <see cref="DataRow"/>.
+        /// </summary>
+        public static DataRow GetRow(int id, DBContext db = null)
+        {
+            return MetaDataUtility.GetEntityRow<<#= entTypeCSharpName #>>(id, db: db);
+        }
+
+        /// <summary>
+        /// Извлекает из БД сущность "<#= _entity.Name #>", представленной объектом <see cref="DataRow"/>.
+        /// </summary>
+        public static DataRow GetRow(IDictionary<string, object> whereConditions = null, DBContext db = null)
+        {
+            return MetaDataUtility.GetEntityRow<<#= entTypeCSharpName #>>(whereConditions: whereConditions, db: db);
+        }
+
+        /// <summary>
+        /// Извлекает из БД сущность "<#= _entity.Name #>" с учетом проектных записей, представленной объектом <see cref="DataRow"/>.
+        /// </summary>
+        public static DataRow GetProjectRow(int id, DBContext db = null)
+        {
+            return MetaDataUtility.GetEntityRow<<#= entTypeCSharpName #>>(id, lookupProjectView: true, db: db);
+        }
+
+        /// <summary>
+        /// Извлекает из БД сущность "<#= _entity.Name #>" с учетом проектных записей, представленной объектом <see cref="DataRow"/>.
+        /// </summary>
+        public static DataRow GetProjectRow(IDictionary<string, object> whereConditions = null, DBContext db = null)
+        {
+            return MetaDataUtility.GetEntityRow<<#= entTypeCSharpName #>>(whereConditions: whereConditions, lookupProjectView: true, db: db);
+        }
+
+        /// <summary>
+        /// Возвращает последовательность элементов в виде коллекции <see cref="IList<>"/>.
+        /// </summary>
+        public static IList<<#= entTypeCSharpName #>> Select(IDictionary<string, object> whereConditions = null,
+            IDictionary<string, SortOrder> orderConditions = null, DBContext db = null)
+        {
+            return MetaDataUtility.GetEntities<<#= entTypeCSharpName #>>(whereConditions: whereConditions,
+                    orderConditions: orderConditions, db: db);
+        }
+
+        /// <summary>
+        /// Возвращает последовательность элементов с учетом проектных записей в виде коллекции <see cref="IList<>"/>.
+        /// </summary>
+        public static IList<<#= entTypeCSharpName #>> SelectProject(IDictionary<string, object> whereConditions = null,
+            IDictionary<string, SortOrder> orderConditions = null, DBContext db = null)
+        {
+            return MetaDataUtility.GetEntities<<#= entTypeCSharpName #>>(whereConditions: whereConditions,
+                    orderConditions: orderConditions, lookupProjectView: true, db: db);
+        }
+
+        /// <summary>
+        /// Возвращает последовательность элементов в виде объекта <see cref="DataTable"/>.
+        /// </summary>
+        public static DataTable SelectTable(IDictionary<string, object> whereConditions = null,
+            IDictionary<string, SortOrder> orderConditions = null, IList<string> selectFields = null, DBContext db = null)
+        {
+            return MetaDataUtility.SelectEntitiesTable<<#= entTypeCSharpName #>>(whereConditions: whereConditions,
+                    orderConditions: orderConditions, selectFields: selectFields, db: db);
+        }
+
+        /// <summary>
+        /// Возвращает последовательность элементов с учетом проектных записей в виде объекта <see cref="DataTable"/>.
+        /// </summary>
+        public static DataTable SelectProjectTable(IDictionary<string, object> whereConditions = null,
+            IDictionary<string, SortOrder> orderConditions = null, IList<string> selectFields = null, DBContext db = null)
+        {
+            return MetaDataUtility.SelectEntitiesTable<<#= entTypeCSharpName #>>(whereConditions: whereConditions,
+                    orderConditions: orderConditions, selectFields: selectFields, lookupProjectView: true, db: db);
+        }
+
+        #endregion
+#endif
+    }
+
+    /// <summary>
+    /// <#= _entity.Name #>Repository.
+    /// </summary>
+    /// <remarks>
+    /// ВНИМАНИЕ!!! Данный класс был сгенерирован автоматически, поэтому все изменения, внесенные Вами в этот класс,
+    /// могут быть утеряны при последующих генерациях.
+    /// </remarks>
+    public partial class <#= entTypeCSharpName #>Repository : EntityReposioryBase<<#= entTypeCSharpName #>>, IEntityRepository<<#= entTypeCSharpName #>>
+    {
+        public <#= entTypeCSharpName #>Repository(IDbAndMetadataContext metadata, DBContext database):
+            base(Entity.Names.<#= entTypeCSharpName #>, metadata, database)
+        {
+        }
+    }
+}
+<#+ 
+        return this.GenerationEnvironment.ToString();
+    }
+}
+#>

@@ -1,0 +1,18 @@
+﻿<#@ template language="C#" hostspecific="True" debug="True" #>
+<#@ output extension="txt" #>
+<#@ include file="T4Toolbox.tt" #>
+
+<#@ include file="Settings.tt" #>
+<#@ include file="Common.tt" #>
+<#@ include file="..\Generators\CrossSetGenerator.tt" #>
+
+<#
+
+CrossSetGenerator generator = new CrossSetGenerator 
+	{ 
+		ConnectionString = ConnectionString,
+		OutputDirectory = CrossesOutputDirectory
+	};
+generator.Run();
+
+#>

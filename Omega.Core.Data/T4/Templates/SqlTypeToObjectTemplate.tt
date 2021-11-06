@@ -1,0 +1,169 @@
+﻿<#@ template  debug="true" hostSpecific="true" #>
+<#@ output extension=".cs" #>
+<#@ import namespace="System.IO" #>
+ 
+<#+
+public class SqlTypeToObjectTemplate : Template
+{
+    private string _projectNamespace;
+    private string _sqlType;
+    private string _className;
+    private IList<SqlFieldInfo> _sqlFields;
+
+    public SqlTypeToObjectTemplate(string projectNamespace, string sqlType, string className, IList<SqlFieldInfo> sqlFields)
+    {
+        if (string.IsNullOrWhiteSpace(projectNamespace))
+            throw new ArgumentNullException("projectNamespace");
+
+        if (string.IsNullOrWhiteSpace(className))
+            throw new ArgumentNullException("className");
+
+        _projectNamespace = projectNamespace;
+        _sqlType = sqlType;
+        _className = className;
+        _sqlFields = sqlFields;
+    }
+
+    public override string TransformText()
+    {
+#>
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
+
+#if CLR_PROJECT
+using TruckService.ADTS.SQLCLR.Common.Utility;
+using TruckService.ADTS.SQLCLR.StoredProcedure.Utility;
+#else
+using TruckService.ADTS.Core.Utility;
+using TruckService.ADTS.Core.DAL;
+#endif
+
+namespace <#= _projectNamespace #>.DAL.SqlTypeObjects
+{
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <remarks>
+    /// ВНИМАНИЕ!!! Данный класс был сгенерирован автоматически, поэтому все изменения, внесенные Вами в этот класс,
+    /// могут быть утеряны при последующих генерациях.
+    /// </remarks>
+    public partial class <#= _className #>
+    {
+        public const string TypeName = "<#= _sqlType #>";
+
+        #region Properties
+
+<#+ foreach (var sqlField in _sqlFields) { #>
+        public <#= sqlField.CSharpDataTypeDeclaration #> <#= sqlField.CSharpName #> { get; set; }
+<#+ } #>
+
+        #endregion Properties
+
+
+        #region Constructors
+
+        public <#= _className #>()
+        {
+        }
+
+        #endregion Constructors
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <remarks>
+    /// ВНИМАНИЕ!!! Данный класс был сгенерирован автоматически, поэтому все изменения, внесенные Вами в этот класс,
+    /// могут быть утеряны при последующих генерациях.
+    /// </remarks>
+    public static class <#= _className #>Extensions
+    {
+        #region Columns class
+
+        public class Columns
+        {
+<#+ foreach (var sqlField in _sqlFields) 
+{
+    string cSharpName = EntityTemplateHelper.GetCSharpName(sqlField.Name, true);
+    #>
+            public const string <#= cSharpName #> = "<#= sqlField.Name #>";
+<#+ } #>
+        }
+
+        #endregion Columns class
+
+        /// <summary>
+        /// Преобразует перечисление из объектов <see cref="<#= _className #>"/> в объект <see cref="DataTable"/>.
+        /// </summary>
+        /// <param name="source"></param>
+        /// <returns></returns>
+        public static DataTable ToTable(this IEnumerable<<#= _className #>> source)
+        {
+            var dt = CreateTable();
+
+            foreach(var sourceItem in source)
+            {
+                var newRow = DataUtility.CreateNewRow(dt);
+
+<#+ foreach (var sqlField in _sqlFields) { #>
+                newRow[Columns.<#= sqlField.CSharpName #>] = sourceItem.<#= sqlField.CSharpName #><#= sqlField.AllowDBNull ? ".ToDBValue()" : string.Empty #>;
+<#+ } #>
+            }
+
+            dt.AcceptChanges();
+            return dt;
+        }
+
+        /// <summary>
+        /// Преобразует перечисление из объектов <typeparamref name="TSourceItem"/> в объект <see cref="DataTable"/>
+        /// с помощью заданного конвертера.
+        /// </summary>
+        /// <typeparam name="TSourceItem"></typeparam>
+        /// <param name="source"></param>
+        /// <param name="converter"></param>
+        /// <returns></returns>
+        public static DataTable ToTable<TSourceItem>(this IEnumerable<TSourceItem> source, Func<TSourceItem, <#= _className #>> converter)
+        {
+            var dt = CreateTable();
+
+            foreach(var sourceItem in source)
+            {
+                var item = converter(sourceItem);
+                var newRow = DataUtility.CreateNewRow(dt);
+
+<#+ foreach (var sqlField in _sqlFields) { #>
+                newRow[Columns.<#= sqlField.CSharpName #>] = item.<#= sqlField.CSharpName #><#= sqlField.AllowDBNull ? ".ToDBValue()" : string.Empty #>;
+<#+ } #>
+            }
+
+            dt.AcceptChanges();
+            return dt;
+        }
+
+        public static SqlParameter ToParameter(this IEnumerable<<#= _className #>> source, DBContext db, string paramName)
+        {
+            return db.MakeStructuredInParam(paramName, <#= _className #>.TypeName, source.ToTable());
+        }
+
+        public static SqlParameter ToParameter<TSourceItem>(this IEnumerable<TSourceItem> source, DBContext db, string paramName, Func<TSourceItem, <#= _className #>> converter)
+        {
+            return db.MakeStructuredInParam(paramName, <#= _className #>.TypeName, source.ToTable<TSourceItem>(converter));
+        }
+
+        private static DataTable CreateTable()
+        {
+            DataTable dt = new DataTable();
+<#+ foreach (var sqlField in _sqlFields) { #>
+            dt.Columns.Add(Columns.<#= sqlField.CSharpName #>, typeof(<#= sqlField.CSharpDataType #>));
+<#+ } #>
+            return dt;
+        }
+    }
+}
+<#+ 
+        return this.GenerationEnvironment.ToString();
+    }
+}
+#>

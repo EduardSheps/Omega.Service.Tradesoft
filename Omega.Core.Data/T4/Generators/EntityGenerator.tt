@@ -1,0 +1,223 @@
+﻿<#@ include file="..\Templates\EntityTemplate.tt" #>
+
+<#@ assembly name="System.Data.dll" #>
+<#@ assembly name="System.Xml.dll" #>
+<#@ import namespace="System.Data" #>
+<#@ import namespace="System.Data.SqlClient" #>
+<#@ import namespace="System.IO" #>
+
+<#+
+public class EntityGenerator : Generator
+{
+		private const string GetMetadataSqlTemplate =
+@"
+SELECT
+  id_entity = ent.id,
+  ent.name,
+  ent.system_name,
+  container = cnt.name
+FROM vw_A_Entity ent (NOLOCK)
+  INNER JOIN vw_A_Container cnt (NOLOCK) ON cnt.id = ent.id_container
+WHERE ent.system_name = '{0}'
+ORDER BY cnt.name
+
+SELECT
+  atr.name,
+  atr.column_name,
+  data_type = dtp.name,
+  atr.length,
+  atr.is_required,
+  atr.id_entity
+FROM vw_A_Entity ent (NOLOCK)
+  INNER JOIN vw_A_Attribute atr (NOLOCK) ON atr.id_entity = ent.id
+  INNER JOIN vw_A_Data_Type dtp (NOLOCK) ON dtp.id = atr.id_data_type
+WHERE ent.system_name = '{0}'
+ORDER BY atr.column_name
+  
+SELECT
+  crt.name,
+  crt.system_name,
+  crt.is_required,
+  link_type = lnk.v,
+  id_1 = crt.id_1,
+  id_2 = crt.id_2,
+  ent_type1 = ent1.system_name,
+  ent_type2 = ent2.system_name
+FROM vw_A_Cross_Type crt (NOLOCK) 
+  INNER JOIN vw_A_Link_Type lnk (NOLOCK) ON lnk.id = crt.id_link
+  INNER JOIN vw_A_Entity ent1 (NOLOCK) ON ent1.id = crt.id_1 AND ent1.system_name = '{0}'
+  INNER JOIN vw_A_Entity ent2 (NOLOCK) ON ent2.id = crt.id_2
+ORDER BY crt.system_name
+";
+
+		private const string GetAllEntitesSql =
+@"
+SELECT
+  id_entity = ent.id,
+  ent.name,
+  ent.system_name,
+  container = cnt.name
+FROM vw_A_Entity ent (NOLOCK)
+  INNER JOIN vw_A_Container cnt (NOLOCK) ON cnt.id = ent.id_container
+ORDER BY ent.system_name";
+	
+		private const string GetAllManyToManyCrossesSql =
+@"
+SELECT
+  crt.name,
+  crt.system_name,
+  crt.is_required,
+  link_type = lnk.v,
+  id_1 = crt.id_1,
+  id_2 = crt.id_2,
+  ent_type1 = ent1.system_name,
+  ent_type1_name = ent1.name,
+  ent_type2 = ent2.system_name,
+  ent_type2_name = ent2.name
+FROM vw_A_Cross_Type crt (NOLOCK) 
+  INNER JOIN vw_A_Link_Type lnk (NOLOCK) ON lnk.id = crt.id_link
+  INNER JOIN vw_A_Entity ent1 (NOLOCK) ON ent1.id = crt.id_1
+  INNER JOIN vw_A_Entity ent2 (NOLOCK) ON ent2.id = crt.id_2
+WHERE lnk.v = 'многие ко многим'
+ORDER BY crt.system_name";
+	
+	
+	public string ConnectionString { get; set; }
+	public string OutputDirectory { get; set; }
+	public bool PreserveExistingFile { get; set; }
+	public string EntityName { get; set; }
+	public bool RegenerateEntityClass { get; set; }
+	
+	
+	public EntityGenerator()
+	{
+		RegenerateEntityClass = true;
+	}
+	
+	protected override void RunCore()
+	{
+		if (string.IsNullOrWhiteSpace(ConnectionString))
+			throw new InvalidOperationException("Не задано свойство ConnectionString");
+		
+		if (string.IsNullOrWhiteSpace(EntityName))
+			throw new InvalidOperationException("Не задано свойство EntityName");
+	
+		Entity entity = null;
+		
+		using (SqlConnection con = new SqlConnection(ConnectionString))
+		{
+			con.Open();
+
+			string sql = string.Format(GetMetadataSqlTemplate, EntityName);
+			using (SqlDataAdapter da = new SqlDataAdapter(sql, con))
+			{
+				DataSet ds = new DataSet();
+				da.Fill(ds);
+				
+				if (ds.Tables[0].Rows.Count == 0)
+					throw new InvalidOperationException(string.Format("Сущность \"{0}\" не найдена в БД", EntityName));
+
+				DataRow entityRow = ds.Tables[0].Rows[0];
+				entity = new Entity
+				{
+					Name = (string)entityRow["name"],
+					SystemName = (string)entityRow["system_name"],
+					Container = (string)entityRow["container"],
+				};
+				
+				foreach (DataRow attribRow in ds.Tables[1].Rows)
+				{
+					entity.Attributes.Add(new Attribute
+					{
+						Name = (string)attribRow["name"],
+						ColumnName = (string)attribRow["column_name"],
+						DataType = ((string)attribRow["data_type"]).ToUpper(),
+						Length = (int)attribRow["length"],
+						IsRequired = (bool)attribRow["is_required"]						
+					});
+				}
+				
+				foreach (DataRow crossRow in ds.Tables[2].Rows)
+				{
+					entity.CrossTypes.Add(new CrossType
+					{
+						Name = (string)crossRow["name"],
+						SystemName = (string)crossRow["system_name"],
+						LinkType = (string)crossRow["link_type"],
+						IsRequired = (bool)crossRow["is_required"],
+						FirstEntitySysName = (string)crossRow["ent_type1"],
+						SecondEntitySysName = (string)crossRow["ent_type2"],
+						IsReverse = false
+					});
+				}
+				
+				List<Entity> allEntities = new List<Entity>();
+				if (entity.SystemName == "entity")
+				{
+					using (SqlDataAdapter daAllEntites = new SqlDataAdapter(GetAllEntitesSql, con))
+					{
+						DataSet dsAllEntites = new DataSet();
+						daAllEntites.Fill(dsAllEntites);
+
+						foreach (DataRow entRow in dsAllEntites.Tables[0].Rows)
+						{
+							allEntities.Add(new Entity
+							{
+								Name = (string)entRow["name"],
+								SystemName = (string)entRow["system_name"],
+								Container = (string)entRow["container"],
+							});
+						}
+					}
+				}
+				
+				List<CrossType> crosses = new List<CrossType>();				
+				if (entity.SystemName == "cross_type")
+				{
+					using (SqlDataAdapter daAllCrosses = new SqlDataAdapter(GetAllManyToManyCrossesSql, con))
+					{
+						DataSet dsAllCrosses = new DataSet();
+						daAllCrosses.Fill(dsAllCrosses);
+
+						foreach (DataRow crossRow in dsAllCrosses.Tables[0].Rows)
+						{
+							crosses.Add(new CrossType
+							{
+								Name = (string)crossRow["name"],
+								SystemName = (string)crossRow["system_name"],
+								LinkType = (string)crossRow["link_type"],
+								IsRequired = (bool)crossRow["is_required"],
+								FirstEntitySysName = (string)crossRow["ent_type1"],
+								FirstEntityName = (string)crossRow["ent_type1_name"],
+								SecondEntitySysName = (string)crossRow["ent_type2"],
+								SecondEntityName = (string)crossRow["ent_type2_name"],
+								IsReverse = false
+							});
+						}
+					}
+				}
+				
+				EntityTemplate template = new EntityTemplate(entity, allEntities, crosses);
+				template.Output.PreserveExistingFile = PreserveExistingFile;
+				string fileName = string.Format("{0}.Generated.cs", EntityTemplateHelper.GetCSharpName(entity.SystemName));
+				fileName = Path.Combine(OutputDirectory ?? string.Empty, fileName);
+				template.RenderToFile(fileName);
+			}
+
+			con.Close();
+		}
+		
+		if (RegenerateEntityClass && entity.SystemName != "entity")
+		{
+			EntityGenerator generator = new EntityGenerator 
+				{ 
+					ConnectionString = ConnectionString,
+					OutputDirectory = OutputDirectory,
+					PreserveExistingFile = PreserveExistingFile,
+					EntityName = "entity"
+				};
+			generator.Run();
+		}
+	}
+}
+#>

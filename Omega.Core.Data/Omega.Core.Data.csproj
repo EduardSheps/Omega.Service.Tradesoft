@@ -1,0 +1,218 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{B1D49B82-6F9E-4F31-8422-9A5726076EE5}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Omega.Core.Data</RootNamespace>
+    <AssemblyName>Omega.Core.Data</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EntityFramework.6.2.0\lib\net45\EntityFramework.dll</HintPath>
+    </Reference>
+    <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EntityFramework.6.2.0\lib\net45\EntityFramework.SqlServer.dll</HintPath>
+    </Reference>
+    <Reference Include="protobuf-net, Version=3.0.0.0, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
+      <HintPath>..\packages\protobuf-net.3.0.101\lib\net461\protobuf-net.dll</HintPath>
+    </Reference>
+    <Reference Include="protobuf-net.Core, Version=3.0.0.0, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
+      <HintPath>..\packages\protobuf-net.Core.3.0.101\lib\net461\protobuf-net.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Buffers, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Buffers.4.5.1\lib\net461\System.Buffers.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Collections.Immutable, Version=1.2.5.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Collections.Immutable.1.7.1\lib\net461\System.Collections.Immutable.dll</HintPath>
+    </Reference>
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Memory, Version=4.0.1.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Memory.4.5.4\lib\net461\System.Memory.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Numerics.Vectors, Version=4.1.4.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Numerics.Vectors.4.5.0\lib\net46\System.Numerics.Vectors.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=4.0.4.1, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.4.5.3\lib\net461\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Security" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Application\ApplicationBase.cs" />
+    <Compile Include="Application\ApplicationHostHelpers.cs" />
+    <Compile Include="Application\DataLayerApplicationBase.cs" />
+    <Compile Include="Data\BulkCopyGenericDataReader.cs" />
+    <Compile Include="Data\ConnectionInfo.cs" />
+    <Compile Include="Data\DataAccessExecuteException.cs" />
+    <Compile Include="Data\DataAccessTimeOutException.cs" />
+    <Compile Include="Data\IOmegaDataLayer.cs" />
+    <Compile Include="Data\ITransaction.cs" />
+    <Compile Include="Data\OmegaBulkCopy.cs" />
+    <Compile Include="Data\OmegaCommand.cs" />
+    <Compile Include="Data\OmegaConnection.cs" />
+    <Compile Include="Data\OmegaDataLayer.cs" />
+    <Compile Include="Data\OmegaTransaction.cs" />
+    <Compile Include="Data\OmegaTransaction.Exception.cs" />
+    <Compile Include="Data\SqlExceptionHelper.cs" />
+    <Compile Include="OmegaEntityModel.Context.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>OmegaEntityModel.Context.tt</DependentUpon>
+    </Compile>
+    <Compile Include="OmegaEntityModel.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>OmegaEntityModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="OmegaEntityModel.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>OmegaEntityModel.edmx</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="OmegaEntityModel.Context.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <DependentUpon>OmegaEntityModel.edmx</DependentUpon>
+      <LastGenOutput>OmegaEntityModel.Context.cs</LastGenOutput>
+    </Content>
+    <Content Include="OmegaEntityModel.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <DependentUpon>OmegaEntityModel.edmx</DependentUpon>
+      <LastGenOutput>OmegaEntityModel.cs</LastGenOutput>
+    </Content>
+    <Content Include="T4\Generators\CrossGenerator.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>CrossGenerator3.cs</LastGenOutput>
+    </Content>
+    <Content Include="T4\Generators\CrossSetGenerator.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>CrossSetGenerator3.cs</LastGenOutput>
+    </Content>
+    <Content Include="T4\Generators\EntityGenerator.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>EntityGenerator3.cs</LastGenOutput>
+    </Content>
+    <Content Include="T4\Generators\EntitySetGenerator.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>EntitySetGenerator3.cs</LastGenOutput>
+    </Content>
+    <Content Include="T4\Generators\SqlToObjectGenerator.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>SqlToObjectGenerator3.cs</LastGenOutput>
+    </Content>
+    <Content Include="T4\Generators\SqlTypeToObjectGenerator.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>SqlTypeToObjectGenerator3.cs</LastGenOutput>
+    </Content>
+    <Content Include="T4\Scripts\Common.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Common.cs</LastGenOutput>
+    </Content>
+    <Content Include="T4\Scripts\CrossScript.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>CrossScript.txt</LastGenOutput>
+    </Content>
+    <Content Include="T4\Scripts\CrossSetScript.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>CrossSetScript.txt</LastGenOutput>
+    </Content>
+    <Content Include="T4\Scripts\EntityScript.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>EntityScript.txt</LastGenOutput>
+    </Content>
+    <Content Include="T4\Scripts\EntitySetScript.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>EntitySetScript.txt</LastGenOutput>
+    </Content>
+    <Content Include="T4\Scripts\Settings.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Settings.cs</LastGenOutput>
+    </Content>
+    <Content Include="T4\Scripts\SqlToObjectScript.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>SqlToObjectScript.cs</LastGenOutput>
+    </Content>
+    <Content Include="T4\Scripts\SqlTypeToObjectScript.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>SqlTypeToObjectScript1.cs</LastGenOutput>
+    </Content>
+    <Content Include="T4\Templates\CrossTemplate.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>CrossTemplate1.cs</LastGenOutput>
+    </Content>
+    <Content Include="T4\Templates\EntityTemplate.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>EntityTemplate1.cs</LastGenOutput>
+    </Content>
+    <Content Include="T4\Templates\SqlToObjectTemplate.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>SqlToObjectTemplate1.cs</LastGenOutput>
+    </Content>
+    <Content Include="T4\Templates\SqlTypeToObjectTemplate.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>SqlTypeToObjectTemplate1.cs</LastGenOutput>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+    <EntityDeploy Include="OmegaEntityModel.edmx">
+      <Generator>EntityModelCodeGenerator</Generator>
+      <LastGenOutput>OmegaEntityModel.Designer.cs</LastGenOutput>
+    </EntityDeploy>
+    <None Include="OmegaEntityModel.edmx.diagram">
+      <DependentUpon>OmegaEntityModel.edmx</DependentUpon>
+    </None>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="DAL\Crosses\Generated\" />
+    <Folder Include="DAL\Entities\Generated\" />
+    <Folder Include="DAL\Helpers\Generated\" />
+    <Folder Include="DAL\SqlSourceObjects\Generated\" />
+    <Folder Include="DAL\SqlTypeObjects\Generated\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

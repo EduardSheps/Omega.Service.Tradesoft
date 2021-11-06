@@ -1,0 +1,18 @@
+﻿<#@ template language="C#" hostspecific="True" debug="True" #>
+<#@ output extension="txt" #>
+<#@ include file="T4Toolbox.tt" #>
+
+<#@ include file="Settings.tt" #>
+<#@ include file="Common.tt" #>
+<#@ include file="..\Generators\EntitySetGenerator.tt" #>
+
+<#
+
+EntitySetGenerator generator = new EntitySetGenerator 
+	{ 
+		ConnectionString = ConnectionString,
+		OutputDirectory = EntititesOutputDirectory
+	};
+generator.Run();
+
+#>

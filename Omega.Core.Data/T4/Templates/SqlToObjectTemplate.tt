@@ -1,0 +1,230 @@
+﻿<#@ template  debug="true" hostSpecific="true" #>
+<#@ output extension=".cs" #>
+<#@ import namespace="System.IO" #>
+ 
+<#+
+public class SqlToObjectTemplate : Template
+{
+    private string _projectNamespace;
+    private string _className;
+    private string _sqlSource;
+    private string _sqlSourceType;
+    private IList<SqlFieldInfo> _sqlFieldsIn;	
+    private IList<SqlFieldInfo> _sqlFieldsOut;
+
+    public SqlToObjectTemplate(string projectNamespace, string className, string sqlSource, string sqlSourceType, 
+                        IList<SqlFieldInfo> sqlFieldsIn, IList<SqlFieldInfo> sqlFieldsOut)
+    {
+        if (string.IsNullOrWhiteSpace(projectNamespace))
+            throw new ArgumentNullException("projectNamespace");
+
+        if (string.IsNullOrWhiteSpace(className))
+            throw new ArgumentNullException("className");
+
+        if (string.IsNullOrWhiteSpace(sqlSource))
+            throw new ArgumentNullException("sqlSource");
+
+        if (string.IsNullOrWhiteSpace(sqlSourceType))
+            throw new ArgumentNullException("sqlSourceType");
+
+        _projectNamespace = projectNamespace;
+        _className = className;
+        _sqlSource = sqlSource;
+        _sqlSourceType = sqlSourceType;
+        _sqlFieldsIn = sqlFieldsIn;
+    _sqlFieldsOut = sqlFieldsOut;
+    }
+
+    public override string TransformText()
+    {
+#>
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
+
+using TruckService.ADTS.Core.DAL;
+using TruckService.ADTS.Core.DAL.DataLoad;
+using TruckService.ADTS.Core.DAL.SqlSourceObjects;
+using TruckService.ADTS.Core.DAL.SqlTypeObjects;
+using TruckService.ADTS.Core.Utility;
+
+namespace <#= _projectNamespace #>.DAL.SqlSourceObjects
+{
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <remarks>
+    /// ВНИМАНИЕ!!! Данный класс был сгенерирован автоматически, поэтому все изменения, внесенные Вами в этот класс,
+    /// могут быть утеряны при последующих генерациях.
+    /// </remarks>
+    public partial class <#= _className #> : BaseSqlSourceObject, IDataInitSupported
+    {
+        public const string SqlSourceName = "<#= _sqlSource #>";
+
+
+        #region Columns class
+
+        public class Columns
+        {
+<#+ foreach (var sqlField in _sqlFieldsOut) 
+{
+    string cSharpName = EntityTemplateHelper.GetCSharpName(sqlField.Name, true);
+    #>
+            public const string <#= cSharpName #> = "<#= sqlField.Name #>";
+<#+ } #>
+        }
+
+        #endregion Columns class
+
+
+        #region Properties
+
+<#+ foreach (var sqlField in _sqlFieldsOut) { #>
+        public <#= sqlField.CSharpDataTypeDeclaration #> <#= sqlField.CSharpName #> { get; set; }
+<#+ } #>
+
+        #endregion Properties
+
+
+        #region Constructors
+
+        public <#= _className #>()
+        {
+        }
+
+        public <#= _className #>(DataRow sourceRow)
+        {
+            InitFromRow(sourceRow);
+        }
+
+        public <#= _className #>(IDataReader reader)
+        {
+            InitFromReader(reader);
+        }
+
+        #endregion Constructors
+
+
+        public void InitFromRow(DataRow sourceRow)
+        {
+<#+ foreach (var sqlField in _sqlFieldsOut) { #>
+            <#= sqlField.CSharpName #> = sourceRow[Columns.<#= sqlField.CSharpName #>].GetAs<<#= sqlField.CSharpDataTypeDeclaration #>>();
+<#+ } #>
+        }
+
+        public void InitFromReader(IDataReader reader)
+        {
+<#+ foreach (var sqlField in _sqlFieldsOut) { #>
+            <#= sqlField.CSharpName #> = reader[Columns.<#= sqlField.CSharpName #>].GetAs<<#= sqlField.CSharpDataTypeDeclaration #>>();
+<#+ } #>
+        }
+
+        public static string[] GetOwnColumns()
+        {
+            return new string[]
+            {
+<#+ for (int i = 0; i < _sqlFieldsOut.Count; i++) { #>
+                Columns.<#= _sqlFieldsOut[i].CSharpName #><#= (i == _sqlFieldsOut.Count - 1) ? string.Empty : "," #>
+<#+ } #>
+            };
+        }
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <remarks>
+    /// ВНИМАНИЕ!!! Данный класс был сгенерирован автоматически, поэтому все изменения, внесенные Вами в этот класс,
+    /// могут быть утеряны при последующих генерациях.
+    /// </remarks>
+    public partial class <#= _className #>Repository : SqlSourceObjectRepositoryBase<<#= _className #>>
+    {
+        public <#= _className #>Repository(DBContext database) : base(database)
+        {
+        }
+
+        /// <summary>
+        /// Возвращает последовательность элементов в виде объекта <see cref="DataTable"/>.
+        /// </summary>
+        public DataTable SelectTable
+            (
+<#+ for (int i = 0; i < _sqlFieldsIn.Count; i++) { #>
+                <#= _sqlFieldsIn[i].CSharpDataTypeDeclaration #> <#= _sqlFieldsIn[i].CSharpCamelCaseName #><#= (i == _sqlFieldsIn.Count - 1) ? string.Empty : "," #>
+<#+ } #>
+            )
+        {
+            var sqlParams = GetSqlParams
+            (
+<#+ for (int i = 0; i < _sqlFieldsIn.Count; i++) { #>
+                <#= _sqlFieldsIn[i].CSharpCamelCaseName #><#= (i == _sqlFieldsIn.Count - 1) ? string.Empty : "," #>
+<#+ } #>
+            );
+            return Database.Get<#= _sqlSourceType == "P" ? "Proc" : "Func" #>DataTable(<#= _className #>.SqlSourceName, sqlParams);
+        }
+
+        /// <summary>
+        /// Возвращает последовательность элементов в виде коллекции <see cref="IList<>"/>.
+        /// </summary>
+        public IList<<#= _className #>> Select
+            (
+<#+ for (int i = 0; i < _sqlFieldsIn.Count; i++) { #>
+                <#= _sqlFieldsIn[i].CSharpDataTypeDeclaration #> <#= _sqlFieldsIn[i].CSharpCamelCaseName #><#= (i == _sqlFieldsIn.Count - 1) ? string.Empty : "," #>
+<#+ } #>
+            )
+        {
+            var sqlParams = GetSqlParams
+            (
+<#+ for (int i = 0; i < _sqlFieldsIn.Count; i++) { #>
+                <#= _sqlFieldsIn[i].CSharpCamelCaseName #><#= (i == _sqlFieldsIn.Count - 1) ? string.Empty : "," #>
+<#+ } #>
+            );
+
+            return Select<#= _sqlSourceType == "P" ? "Proc" : "Func" #>(<#= _className #>.SqlSourceName, sqlParams);
+        }
+
+        /// <summary>
+        /// Возвращает единственный элемент последовательности и генерирует исключение, если число элементов последовательности больше 1.
+        /// </summary>
+        public <#= _className #> Get
+            (
+<#+ for (int i = 0; i < _sqlFieldsIn.Count; i++) { #>
+                <#= _sqlFieldsIn[i].CSharpDataTypeDeclaration #> <#= _sqlFieldsIn[i].CSharpCamelCaseName #><#= (i == _sqlFieldsIn.Count - 1) ? string.Empty : "," #>
+<#+ } #>
+            )
+        {
+            var sqlParams = GetSqlParams
+            (
+<#+ for (int i = 0; i < _sqlFieldsIn.Count; i++) { #>
+                <#= _sqlFieldsIn[i].CSharpCamelCaseName #><#= (i == _sqlFieldsIn.Count - 1) ? string.Empty : "," #>
+<#+ } #>
+            );
+
+            return Get<#= _sqlSourceType == "P" ? "Proc" : "Func" #>(<#= _className #>.SqlSourceName, sqlParams);
+        }
+
+        public SqlParameter[] GetSqlParams
+            (
+<#+ for (int i = 0; i < _sqlFieldsIn.Count; i++) { #>
+                <#= _sqlFieldsIn[i].CSharpDataTypeDeclaration #> <#= _sqlFieldsIn[i].CSharpCamelCaseName #><#= (i == _sqlFieldsIn.Count - 1) ? string.Empty : "," #>
+<#+ } #>
+            )
+        {
+            return new SqlParameter[]
+            {
+<#+ for (int i = 0; i < _sqlFieldsIn.Count; i++) { 
+        if (_sqlFieldsIn[i].IsTableType) { #>
+                Database.MakeStructuredInParam("<#= _sqlFieldsIn[i].Name #>", <#= EntityTemplateHelper.GetCSharpName(_sqlFieldsIn[i].TypeName) #>.TypeName, <#= _sqlFieldsIn[i].CSharpCamelCaseName #>.ToTable())<#= (i == _sqlFieldsIn.Count - 1) ? string.Empty : "," #>
+<#+     } else { #>
+                Database.MakeInParam("<#= _sqlFieldsIn[i].Name #>", SqlDbType.<#= _sqlFieldsIn[i].SqlDbType #>, <#= _sqlFieldsIn[i].Size #>, <#= _sqlFieldsIn[i].CSharpCamelCaseName #>)<#= (i == _sqlFieldsIn.Count - 1) ? string.Empty : "," #>
+<#+     }
+    } #>
+            };
+        }
+    }
+}
+<#+ 
+        return this.GenerationEnvironment.ToString();
+    }
+}
+#>

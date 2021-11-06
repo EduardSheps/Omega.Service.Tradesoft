@@ -1,0 +1,140 @@
+﻿<#@ include file="EntityGenerator.tt" #>
+
+<#@ assembly name="System.Data.dll" #>
+
+
+<#+
+public class EntitySetGenerator : Generator
+{
+		private const string GetAllMetadataSql =
+@"
+SELECT
+  id_entity = ent.id,
+  ent.name,
+  ent.system_name,
+  container = cnt.name
+FROM vw_A_Entity ent (NOLOCK)
+  INNER JOIN vw_A_Container cnt (NOLOCK) ON cnt.id = ent.id_container
+ORDER BY cnt.name
+
+SELECT
+  atr.name,
+  atr.column_name,
+  data_type = dtp.name,
+  atr.length,
+  atr.is_required,
+  atr.id_entity
+FROM vw_A_Attribute atr (NOLOCK)
+  INNER JOIN vw_A_Data_Type dtp (NOLOCK) ON dtp.id = atr.id_data_type
+ORDER BY atr.column_name
+
+SELECT
+  crt.name,
+  crt.system_name,
+  crt.is_required,
+  link_type = lnk.v,
+  id_1 = crt.id_1,
+  id_2 = crt.id_2,
+  ent_type1 = ent1.system_name,
+  ent_type2 = ent2.system_name
+FROM vw_A_Cross_Type crt (NOLOCK) 
+  INNER JOIN vw_A_Link_Type lnk (NOLOCK) ON lnk.id = crt.id_link
+  INNER JOIN vw_A_Entity ent1 (NOLOCK) ON ent1.id = crt.id_1
+  INNER JOIN vw_A_Entity ent2 (NOLOCK) ON ent2.id = crt.id_2
+ORDER BY crt.system_name";
+	
+	public string ConnectionString { get; set; }
+	public string OutputDirectory { get; set; }
+	
+	protected override void RunCore()
+	{
+		if (string.IsNullOrWhiteSpace(ConnectionString))
+			throw new InvalidOperationException("Не задано свойство ConnectionString");
+		
+		using (SqlConnection con = new SqlConnection(ConnectionString))
+		{
+			con.Open();
+
+			using (SqlDataAdapter da = new SqlDataAdapter(GetAllMetadataSql, con))
+			{
+				DataSet ds = new DataSet();
+				da.Fill(ds);
+				
+				foreach (DataRow entityRow in ds.Tables[0].Rows)
+				{
+					Entity entity = new Entity
+					{
+						Name = (string)entityRow["name"],
+						SystemName = (string)entityRow["system_name"],
+						Container = (string)entityRow["container"],
+					};
+					
+					// Для сущностей "Сущность" и "Тип кросса" своя логика генерации дальше по коду
+					if (entity.SystemName == "entity" || entity.SystemName == "cross_type")
+						continue;
+					
+					DataRow[] attribRows = ds.Tables[1].Select(string.Format("id_entity = {0}", entityRow["id_entity"]));
+					foreach (DataRow attribRow in attribRows)
+					{
+						entity.Attributes.Add(new Attribute
+						{
+							Name = (string)attribRow["name"],
+							ColumnName = (string)attribRow["column_name"],
+							DataType = ((string)attribRow["data_type"]).ToUpper(),
+							Length = (int)attribRow["length"],
+							IsRequired = (bool)attribRow["is_required"]						
+						});
+					}
+					
+					DataRow[] crossRows = ds.Tables[2].Select(string.Format("id_1 = {0} AND link_type <> 'многие ко многим'", entityRow["id_entity"]));
+					foreach (DataRow crossRow in crossRows)
+					{
+						entity.CrossTypes.Add(new CrossType
+						{
+							Name = (string)crossRow["name"],
+							SystemName = (string)crossRow["system_name"],
+							LinkType = (string)crossRow["link_type"],
+							IsRequired = (bool)crossRow["is_required"],
+							FirstEntitySysName = (string)crossRow["ent_type1"],
+							SecondEntitySysName = (string)crossRow["ent_type2"],
+							IsReverse = false
+						});
+					}
+					
+					EntityTemplate entityTemplate = new EntityTemplate(entity, null, null);
+					//entityTemplate.Output.PreserveExistingFile = true;
+					
+					string fileName = string.Format("{0}.Generated.cs", EntityTemplateHelper.GetCSharpName(entity.SystemName));
+					fileName = Path.Combine(OutputDirectory ?? string.Empty, fileName);
+					entityTemplate.RenderToFile(fileName);
+				}
+			}
+
+			con.Close();
+		}
+
+		// ВНИМАНИЕ!!! Порядок генерации не менять
+		
+		// отдельно запускает генерацию для сущности "Тип кросса"
+		EntityGenerator crossTypeGenerator = new EntityGenerator 
+			{ 
+				ConnectionString = ConnectionString,
+				OutputDirectory = OutputDirectory,
+				PreserveExistingFile = false,
+				EntityName = "cross_type",
+				RegenerateEntityClass = false
+			};
+		crossTypeGenerator.Run();
+			
+		// отдельно запускает генерацию для сущности "Сущность"
+		EntityGenerator entityGenerator = new EntityGenerator 
+			{ 
+				ConnectionString = ConnectionString,
+				OutputDirectory = OutputDirectory,
+				PreserveExistingFile = false,
+				EntityName = "entity"
+			};
+		entityGenerator.Run();
+	}
+}
+#>

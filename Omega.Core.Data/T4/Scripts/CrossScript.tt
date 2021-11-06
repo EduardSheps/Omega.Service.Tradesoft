@@ -1,0 +1,20 @@
+﻿<#@ template language="C#" hostspecific="True" debug="True" #>
+<#@ output extension="txt" #>
+<#@ include file="T4Toolbox.tt" #>
+
+<#@ include file="Settings.tt" #>
+<#@ include file="Common.tt" #>
+<#@ include file="..\Generators\CrossGenerator.tt" #>
+
+<#
+
+CrossGenerator generator = new CrossGenerator 
+	{ 
+		ConnectionString = ConnectionString,
+		OutputDirectory = CrossesOutputDirectory,
+		PreserveExistingFile = false,
+		CrossName = "supplier_cross_company"
+	};
+generator.Run();
+
+#>

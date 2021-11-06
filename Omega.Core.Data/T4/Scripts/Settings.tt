@@ -1,0 +1,11 @@
+﻿<#+
+
+public const string ConnectionString = @"Data Source=HYPER4\ADTS;Initial Catalog=ADTS_NoEAV_Local;Persist Security Info=True;User ID=sa;Password=adtssa;Timeout=60000";
+public const string CrossesOutputDirectory = "..\\..\\DAL\\Crosses\\Generated\\";
+public const string EntititesOutputDirectory = "..\\..\\DAL\\Entities\\Generated\\";
+public const string HelpersOutputDirectory = "..\\..\\DAL\\Helpers\\Generated\\";
+public const string SqlSourceObjectsOutputDirectory = "..\\..\\DAL\\SqlSourceObjects\\Generated\\";
+public const string SqlTypeObjectsOutputDirectory = "..\\..\\DAL\\SqlTypeObjects\\Generated\\";
+public const string ProjectNamespace = "TruckService.ADTS.Core";
+
+#>

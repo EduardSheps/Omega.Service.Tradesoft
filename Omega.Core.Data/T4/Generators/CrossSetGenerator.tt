@@ -1,0 +1,82 @@
+﻿<#@ include file="..\Templates\CrossTemplate.tt" #>
+<#@ include file="EntityGenerator.tt" #>
+
+<#@ assembly name="System.Data.dll" #>
+
+
+<#+
+public class CrossSetGenerator : Generator
+{
+		private const string GetMetadataSql =
+@"
+SELECT
+  crt.name,
+  crt.system_name,
+  crt.is_required,
+  link_type = lnk.v,
+  id_1 = crt.id_1,
+  id_2 = crt.id_2,
+  ent_type1 = ent1.system_name,
+  ent_type1_name = ent1.name,
+  ent_type2 = ent2.system_name,
+  ent_type2_name = ent2.name
+FROM vw_A_Cross_Type crt (NOLOCK) 
+  INNER JOIN vw_A_Link_Type lnk (NOLOCK) ON lnk.id = crt.id_link
+  INNER JOIN vw_A_Entity ent1 (NOLOCK) ON ent1.id = crt.id_1
+  INNER JOIN vw_A_Entity ent2 (NOLOCK) ON ent2.id = crt.id_2
+WHERE lnk.v = 'многие ко многим'
+ORDER BY crt.system_name";
+
+	public string ConnectionString { get; set; }
+	public string OutputDirectory { get; set; }
+		
+	protected override void RunCore()
+	{
+		if (string.IsNullOrWhiteSpace(ConnectionString))
+			throw new InvalidOperationException("Не задано свойство ConnectionString");
+		
+		using (SqlConnection con = new SqlConnection(ConnectionString))
+		{
+			con.Open();
+
+			using (SqlDataAdapter da = new SqlDataAdapter(GetMetadataSql, con))
+			{
+				DataSet ds = new DataSet();
+				da.Fill(ds);
+
+				foreach (DataRow crossRow in ds.Tables[0].Rows)
+				{
+					CrossType cross = new CrossType
+					{
+						Name = (string)crossRow["name"],
+						SystemName = (string)crossRow["system_name"],
+						LinkType = (string)crossRow["link_type"],
+						IsRequired = (bool)crossRow["is_required"],
+						FirstEntitySysName = (string)crossRow["ent_type1"],
+						FirstEntityName = (string)crossRow["ent_type1_name"],
+						SecondEntitySysName = (string)crossRow["ent_type2"],
+						SecondEntityName = (string)crossRow["ent_type2_name"],
+						IsReverse = false
+					};
+					
+					CrossTemplate template = new CrossTemplate(cross);
+					
+					string fileName = string.Format("{0}Cross.Generated.cs", EntityTemplateHelper.GetCSharpName(cross.SystemName));
+					fileName = Path.Combine(OutputDirectory ?? string.Empty, fileName);
+					template.RenderToFile(fileName);
+				}
+			}
+			
+			con.Close();
+		}
+		
+		EntityGenerator generator = new EntityGenerator 
+			{ 
+				ConnectionString = ConnectionString,
+				OutputDirectory = EntititesOutputDirectory,
+				EntityName = "cross_type"
+			};
+		generator.Run();
+	}
+}
+#>
